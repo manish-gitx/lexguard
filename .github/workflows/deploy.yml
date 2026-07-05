@@ -1,0 +1,99 @@
+name: Deploy
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: cloud-run-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  GCP_PROJECT_ID: lexguard-manish-75853
+  GCP_REGION: asia-south1
+  WORKLOAD_IDENTITY_PROVIDER: projects/311207483497/locations/global/workloadIdentityPools/github-actions/providers/github
+  DEPLOY_SERVICE_ACCOUNT: lexguard-github-deployer@lexguard-manish-75853.iam.gserviceaccount.com
+  RUNTIME_SERVICE_ACCOUNT: lexguard-runtime@lexguard-manish-75853.iam.gserviceaccount.com
+  BACKEND_SERVICE: lexguard-api
+  FRONTEND_SERVICE: lexguard-web
+
+  LLM_BACKEND: vertex
+  GEMINI_MODEL: gemini-2.5-flash
+  GEMINI_MODEL_HEAVY: gemini-2.5-flash
+  FIREBASE_PROJECT_ID: lexguard-manish-75853
+  USER_DOCS_BUCKET: lexguard-user-docs-lexguard-manish-75853
+  MONGODB_URI: ""
+  MONGODB_DB: lexguard
+  APP_ENV: prod
+  LOG_LEVEL: INFO
+  MAX_DOC_BYTES: "10485760"
+  MAX_REQUEST_BYTES: "12582912"
+  MAX_CLAUSES_PER_DOC: "200"
+  RATE_LIMIT_PER_MINUTE: "30"
+  ALLOWED_ORIGINS: "*"
+
+  NEXT_PUBLIC_FIREBASE_API_KEY: AIzaSyCiQjE72J2zXzPtPuTld9jBCudD9EZ0AvM
+  NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: lexguard-manish-75853.firebaseapp.com
+  NEXT_PUBLIC_FIREBASE_PROJECT_ID: lexguard-manish-75853
+  NEXT_PUBLIC_FIREBASE_APP_ID: 1:311207483497:web:9db59beecf7c86df282af8
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.DEPLOY_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy backend
+        run: |
+          gcloud run deploy "$BACKEND_SERVICE" \
+            --source backend \
+            --region "$GCP_REGION" \
+            --project "$GCP_PROJECT_ID" \
+            --service-account "$RUNTIME_SERVICE_ACCOUNT" \
+            --allow-unauthenticated \
+            --memory 512Mi \
+            --cpu 1 \
+            --min-instances 0 \
+            --max-instances 2 \
+            --concurrency 20 \
+            --timeout 300 \
+            --port 8080 \
+            --set-env-vars "LLM_BACKEND=${LLM_BACKEND},GCP_PROJECT_ID=${GCP_PROJECT_ID},GCP_REGION=${GCP_REGION},FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID},USER_DOCS_BUCKET=${USER_DOCS_BUCKET},MONGODB_URI=${MONGODB_URI},MONGODB_DB=${MONGODB_DB},APP_ENV=${APP_ENV},LOG_LEVEL=${LOG_LEVEL},GEMINI_MODEL=${GEMINI_MODEL},GEMINI_MODEL_HEAVY=${GEMINI_MODEL_HEAVY},MAX_DOC_BYTES=${MAX_DOC_BYTES},MAX_REQUEST_BYTES=${MAX_REQUEST_BYTES},MAX_CLAUSES_PER_DOC=${MAX_CLAUSES_PER_DOC},RATE_LIMIT_PER_MINUTE=${RATE_LIMIT_PER_MINUTE},ALLOWED_ORIGINS=${ALLOWED_ORIGINS}" \
+            --set-secrets "GEMINI_API_KEY=lexguard-gemini-key:latest" \
+            --quiet
+
+          backend_url="$(gcloud run services describe "$BACKEND_SERVICE" \
+            --region "$GCP_REGION" \
+            --project "$GCP_PROJECT_ID" \
+            --format='value(status.url)')"
+          echo "NEXT_PUBLIC_LEXGUARD_API_URL=${backend_url}" >> "$GITHUB_ENV"
+
+      - name: Deploy frontend
+        run: |
+          gcloud run deploy "$FRONTEND_SERVICE" \
+            --source website \
+            --region "$GCP_REGION" \
+            --project "$GCP_PROJECT_ID" \
+            --allow-unauthenticated \
+            --memory 512Mi \
+            --cpu 1 \
+            --min-instances 0 \
+            --max-instances 2 \
+            --concurrency 80 \
+            --timeout 60 \
+            --port 8080 \
+            --set-build-env-vars "NEXT_PUBLIC_LEXGUARD_API_URL=${NEXT_PUBLIC_LEXGUARD_API_URL},NEXT_PUBLIC_FIREBASE_API_KEY=${NEXT_PUBLIC_FIREBASE_API_KEY},NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN},NEXT_PUBLIC_FIREBASE_PROJECT_ID=${NEXT_PUBLIC_FIREBASE_PROJECT_ID},NEXT_PUBLIC_FIREBASE_APP_ID=${NEXT_PUBLIC_FIREBASE_APP_ID}" \
+            --set-env-vars "NEXT_PUBLIC_LEXGUARD_API_URL=${NEXT_PUBLIC_LEXGUARD_API_URL},NEXT_PUBLIC_FIREBASE_API_KEY=${NEXT_PUBLIC_FIREBASE_API_KEY},NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN},NEXT_PUBLIC_FIREBASE_PROJECT_ID=${NEXT_PUBLIC_FIREBASE_PROJECT_ID},NEXT_PUBLIC_FIREBASE_APP_ID=${NEXT_PUBLIC_FIREBASE_APP_ID}" \
+            --quiet

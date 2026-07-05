@@ -39,4 +39,8 @@ jobs:
       - run: npm test
       - run: npm run build
         env:
-          NEXT_PUBLIC_LEXGUARD_API_URL: https://lexguard-api-ra2lq6x47q-el.a.run.app
+          NEXT_PUBLIC_LEXGUARD_API_URL: https://lexguard-api-3mvnlmbu5q-el.a.run.app
+          NEXT_PUBLIC_FIREBASE_API_KEY: AIzaSyCiQjE72J2zXzPtPuTld9jBCudD9EZ0AvM
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: lexguard-manish-75853.firebaseapp.com
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: lexguard-manish-75853
+          NEXT_PUBLIC_FIREBASE_APP_ID: 1:311207483497:web:9db59beecf7c86df282af8
