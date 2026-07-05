@@ -1,8 +1,9 @@
 "use client";
 
 import {
+  getRedirectResult,
   onAuthStateChanged,
-  signInWithPopup,
+  signInWithRedirect,
   signOut,
   type User,
 } from "firebase/auth";
@@ -36,6 +37,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!auth) {
       return;
     }
+    void getRedirectResult(auth).catch(() => {
+      setLoading(false);
+    });
     return onAuthStateChanged(auth, (nextUser) => {
       setUser(nextUser);
       setLoading(false);
@@ -49,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       configured: Boolean(auth),
       signIn: async () => {
         if (!auth) return;
-        await signInWithPopup(auth, googleProvider);
+        await signInWithRedirect(auth, googleProvider);
       },
       signOut: async () => {
         if (!auth) return;
