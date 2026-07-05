@@ -42,6 +42,12 @@ SAMPLE_TEXT = (
 
 def _make_responses() -> dict[str, dict[str, Any]]:
     return {
+        "Domain Classifier for LexGuard": {
+            "inferred_domain": "employment",
+            "confidence": 0.91,
+            "reason": "The document discusses employee obligations and termination.",
+            "evidence": ["Probation", "Employee", "Termination"],
+        },
         "Clause Extractor for LexGuard": {
             "issuer_name": "Acme Technologies Pvt. Ltd.",
             "clauses": [
@@ -237,6 +243,7 @@ async def test_orchestrator_end_to_end_with_mocked_llm() -> None:
     markers = {marker for marker, _ in fake.calls}
     assert markers == {
         "Clause Extractor for LexGuard",
+        "Domain Classifier for LexGuard",
         "Risk Classifier for LexGuard",
         "Rights Agent for LexGuard",
         "Red-Team Agent for LexGuard",
@@ -253,7 +260,17 @@ async def test_orchestrator_rejects_short_text() -> None:
 
 
 async def test_extractor_rejects_empty_clauses() -> None:
-    fake = FakeLLM({"Clause Extractor": {"clauses": []}})
+    fake = FakeLLM(
+        {
+            "Domain Classifier": {
+                "inferred_domain": "employment",
+                "confidence": 0.9,
+                "reason": "Employment text.",
+                "evidence": ["Employee"],
+            },
+            "Clause Extractor": {"clauses": []},
+        }
+    )
     with pytest.raises(AnalysisError):
         await analyze_document(
             text=SAMPLE_TEXT, domain=Domain.EMPLOYMENT, llm=fake  # type: ignore[arg-type]

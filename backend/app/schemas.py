@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from enum import Enum
 from typing import Literal
 
@@ -156,9 +157,19 @@ class SeverityCounts(_DomBase):
     critical: int = 0
 
 
+class DomainVerdict(_DomBase):
+    selected_domain: Domain
+    inferred_domain: Domain
+    matches_selection: bool
+    confidence: float = Field(default=0.5, ge=0.0, le=1.0)
+    reason: str = ""
+    evidence: list[str] = Field(default_factory=list)
+
+
 class DocumentScorecard(_DomBase):
     document_id: str
     domain: Domain
+    domain_verdict: DomainVerdict | None = None
     overall_severity: Severity
     risk_score: int = Field(..., ge=0, le=100)
     counts: SeverityCounts
@@ -194,6 +205,32 @@ class FollowupResponse(BaseModel):
 class SuggestionsResponse(BaseModel):
     document_id: str
     suggestions: list[str]
+
+
+class UserHistoryChatMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str
+    created_at: datetime | None = None
+
+
+class UserHistoryItem(BaseModel):
+    document_id: str
+    source_kind: str
+    selected_domain: Domain
+    domain: Domain
+    issuer_name: str | None = None
+    risk_score: int = Field(..., ge=0, le=100)
+    overall_severity: Severity
+    source_url: str | None = None
+    filename: str | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+    scorecard: DocumentScorecard
+    chat_history: list[UserHistoryChatMessage] = Field(default_factory=list)
+
+
+class UserHistoryResponse(BaseModel):
+    items: list[UserHistoryItem]
 
 
 class HealthResponse(BaseModel):

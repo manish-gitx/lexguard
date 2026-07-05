@@ -26,7 +26,6 @@ export default function ReportPage({
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
     fetch(`${API_BASE}/api/v1/reports/${encodeURIComponent(id)}`)
       .then(async (res) => {
         const body = await res.json().catch(() => null);
@@ -101,6 +100,7 @@ export default function ReportPage({
 
             <ScrollReveal>
               <ChatPanel
+                key={scorecard.document_id}
                 documentId={scorecard.document_id}
                 suggestedQuestions={scorecard.suggested_questions}
                 language="en"
@@ -185,6 +185,7 @@ function Header() {
         <NavPill href="/" label="Home" />
         <NavPill href="/scan" label="Scan" />
         <NavPill href="/compare" label="Compare" />
+        <NavPill href="/history" label="History" />
       </nav>
       <StatusPulse label="Shared report" />
     </header>

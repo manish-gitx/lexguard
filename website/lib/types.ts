@@ -63,9 +63,19 @@ export interface SeverityCounts {
   critical: number;
 }
 
+export interface DomainVerdict {
+  selected_domain: Domain;
+  inferred_domain: Domain;
+  matches_selection: boolean;
+  confidence: number;
+  reason: string;
+  evidence: string[];
+}
+
 export interface DocumentScorecard {
   document_id: string;
   domain: Domain;
+  domain_verdict: DomainVerdict | null;
   overall_severity: Severity;
   risk_score: number;
   counts: SeverityCounts;
@@ -90,6 +100,28 @@ export interface FollowupResponse {
   answer: string;
   document_id: string;
   cited_clause_ids: string[];
+}
+
+export interface UserHistoryChatMessage {
+  role: "user" | "assistant";
+  content: string;
+  created_at: string | null;
+}
+
+export interface UserHistoryItem {
+  document_id: string;
+  source_kind: string;
+  selected_domain: Domain;
+  domain: Domain;
+  issuer_name: string | null;
+  risk_score: number;
+  overall_severity: Severity;
+  source_url: string | null;
+  filename: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  scorecard: DocumentScorecard;
+  chat_history: UserHistoryChatMessage[];
 }
 
 export interface ApiError {

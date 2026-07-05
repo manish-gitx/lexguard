@@ -1,24 +1,29 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useAuth } from "@/components/auth-provider";
 import { LexGuardApiError, askFollowup } from "@/lib/api";
 import type { ChatTurn, Language } from "@/lib/types";
 
 const CLAUSE_RE = /\b(c\d+)\b/g;
+const EMPTY_MESSAGES: ChatTurn[] = [];
 
 export function ChatPanel({
   documentId,
   suggestedQuestions,
   language = "en",
   defaultOpen = true,
+  initialMessages = EMPTY_MESSAGES,
 }: {
   documentId: string;
   suggestedQuestions: string[];
   language?: Language;
   defaultOpen?: boolean;
+  initialMessages?: ChatTurn[];
 }) {
+  const { getIdToken } = useAuth();
   const [open, setOpen] = useState(defaultOpen);
-  const [messages, setMessages] = useState<ChatTurn[]>([]);
+  const [messages, setMessages] = useState<ChatTurn[]>(initialMessages);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,11 +46,13 @@ export function ChatPanel({
     setInput("");
     setLoading(true);
     try {
+      const idToken = await getIdToken();
       const res = await askFollowup({
         documentId,
         question: q,
         history: messages,
         language,
+        idToken,
       });
       setMessages([
         ...nextHistory,

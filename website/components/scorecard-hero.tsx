@@ -1,10 +1,12 @@
 import type { DocumentScorecard } from "@/lib/types";
+import { DomainVerdictNotice } from "./domain-verdict-notice";
 import { ListenButton } from "./listen-button";
 import { SeverityPill } from "./severity-pill";
 
 export function ScorecardHero({ scorecard }: { scorecard: DocumentScorecard }) {
   return (
     <section className="border-t border-rule pt-12">
+      <DomainVerdictNotice scorecard={scorecard} />
       {scorecard.seen_before > 0 && (
         <div className="mb-10 border-l-2 border-accent pl-5 py-3">
           <p className="label text-accent mb-2">recycled template detected</p>
@@ -15,7 +17,7 @@ export function ScorecardHero({ scorecard }: { scorecard: DocumentScorecard }) {
             {scorecard.issuer_name
               ? ` — issued by ${scorecard.issuer_name}.`
               : "."}{" "}
-            It's a template, not personalised to you.
+            It&apos;s a template, not personalised to you.
           </p>
         </div>
       )}

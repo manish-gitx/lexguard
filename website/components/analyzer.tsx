@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useAuth } from "@/components/auth-provider";
 import {
   LexGuardApiError,
   analyzePdf,
@@ -43,8 +44,17 @@ export function Analyzer({
   const [language, setLanguage] = useState<Language>("en");
   const [loading, setLoading] = useState(false);
   const [phraseIndex, setPhraseIndex] = useState(0);
+  const { user, loading: authLoading, configured, signIn, getIdToken } = useAuth();
 
   async function submit() {
+    if (!configured) {
+      onError({ message: "Google sign-in is not configured for this environment." });
+      return;
+    }
+    if (!user) {
+      await signIn();
+      return;
+    }
     setLoading(true);
     let i = 0;
     setPhraseIndex(0);
@@ -55,6 +65,7 @@ export function Analyzer({
 
     try {
       let result: DocumentScorecard;
+      const idToken = await getIdToken();
       if (mode === "text") {
         if (text.trim().length < 20) {
           throw new LexGuardApiError(
@@ -63,7 +74,7 @@ export function Analyzer({
             "Paste at least 20 characters of text.",
           );
         }
-        result = await analyzeText({ text, domain_hint: domain, language });
+        result = await analyzeText({ text, domain_hint: domain, language, idToken });
       } else if (mode === "url") {
         if (!/^https?:\/\//i.test(url.trim())) {
           throw new LexGuardApiError(
@@ -72,12 +83,12 @@ export function Analyzer({
             "URL must start with http:// or https://",
           );
         }
-        result = await analyzeUrl(url.trim(), domain, language);
+        result = await analyzeUrl(url.trim(), domain, language, idToken);
       } else {
         if (!file) {
           throw new LexGuardApiError("no_file", 422, "Choose a PDF first.");
         }
-        result = await analyzePdf(file, domain, language);
+        result = await analyzePdf(file, domain, language, idToken);
       }
       onResult(result);
     } catch (e) {
@@ -180,11 +191,17 @@ export function Analyzer({
           <button
             type="button"
             onClick={submit}
-            disabled={loading}
+            disabled={loading || authLoading}
             className="ml-auto group inline-flex items-center gap-3 px-5 py-3 bg-accent text-bg disabled:bg-ink-faint disabled:text-ink-low transition-colors"
           >
             <span className="label text-bg">
-              {loading ? LOADING_PHRASES[phraseIndex] : "Scan"}
+              {loading
+                ? LOADING_PHRASES[phraseIndex]
+                : authLoading
+                  ? "Checking login"
+                  : user
+                    ? "Scan"
+                    : "Sign in to scan"}
             </span>
             <span aria-hidden className="text-bg">
               {loading ? "…" : "↵"}

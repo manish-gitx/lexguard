@@ -17,13 +17,9 @@ export function StatuteDrawer({
 
   useEffect(() => {
     if (!statuteId) {
-      setStatute(null);
-      setError(null);
       return;
     }
     let cancelled = false;
-    setLoading(true);
-    setError(null);
     getStatute(statuteId)
       .then((s) => {
         if (!cancelled) setStatute(s);
@@ -146,7 +142,7 @@ export function StatuteDrawer({
 
               <footer className="pt-6 border-t border-rule">
                 <p className="text-ink-low text-xs leading-relaxed">
-                  Summaries are LexGuard's own paraphrase of the statute,
+                  Summaries are LexGuard&apos;s own paraphrase of the statute,
                   curated for plain-English understanding. Always read the
                   actual text of the law on{" "}
                   <a

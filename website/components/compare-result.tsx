@@ -1,4 +1,5 @@
 import { SeverityPill } from "./severity-pill";
+import { DomainVerdictNotice } from "./domain-verdict-notice";
 import type { ClauseVerdict, DocumentScorecard, Severity } from "@/lib/types";
 
 const SEVERITY_RANK: Record<Severity, number> = {
@@ -178,6 +179,7 @@ function DocColumn({
     .slice(0, 6);
   return (
     <div>
+      <DomainVerdictNotice scorecard={doc} compact />
       <div className="flex items-baseline gap-3 mb-5">
         <span className="label">{label}</span>
         <span className="h-px flex-1 bg-rule" />

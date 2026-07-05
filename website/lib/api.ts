@@ -6,6 +6,7 @@ import type {
   FollowupResponse,
   Language,
   Statute,
+  UserHistoryItem,
 } from "./types";
 
 export const API_BASE =
@@ -38,20 +39,26 @@ async function parse<T>(res: Response): Promise<T> {
   return body as T;
 }
 
+function authHeaders(idToken?: string | null): HeadersInit {
+  return idToken ? { Authorization: `Bearer ${idToken}` } : {};
+}
+
 export interface AnalyzeTextInput {
   text: string;
   domain_hint?: Domain;
   language?: Language;
+  idToken?: string | null;
 }
 
 export async function analyzeText({
   text,
   domain_hint = "generic",
   language = "en",
+  idToken,
 }: AnalyzeTextInput): Promise<DocumentScorecard> {
   const res = await fetch(`${API_BASE}/api/v1/analyze/text`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders(idToken) },
     body: JSON.stringify({ text, domain_hint, language }),
   });
   return parse<DocumentScorecard>(res);
@@ -61,6 +68,7 @@ export async function analyzePdf(
   file: File,
   domain_hint: Domain = "generic",
   language: Language = "en",
+  idToken?: string | null,
 ): Promise<DocumentScorecard> {
   const fd = new FormData();
   fd.append("file", file);
@@ -68,6 +76,7 @@ export async function analyzePdf(
   fd.append("language", language);
   const res = await fetch(`${API_BASE}/api/v1/analyze/pdf`, {
     method: "POST",
+    headers: authHeaders(idToken),
     body: fd,
   });
   return parse<DocumentScorecard>(res);
@@ -77,10 +86,11 @@ export async function analyzeUrl(
   url: string,
   domain_hint: Domain = "generic",
   language: Language = "en",
+  idToken?: string | null,
 ): Promise<DocumentScorecard> {
   const res = await fetch(`${API_BASE}/api/v1/analyze/url`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders(idToken) },
     body: JSON.stringify({ url, domain_hint, language }),
   });
   return parse<DocumentScorecard>(res);
@@ -102,21 +112,34 @@ export async function askFollowup({
   question,
   history,
   language = "en",
+  idToken,
 }: {
   documentId: string;
   question: string;
   history: ChatTurn[];
   language?: Language;
+  idToken?: string | null;
 }): Promise<FollowupResponse> {
   const res = await fetch(
     `${API_BASE}/api/v1/scans/${encodeURIComponent(documentId)}/followup`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeaders(idToken) },
       body: JSON.stringify({ question, history, language }),
     },
   );
   return parse<FollowupResponse>(res);
+}
+
+export async function getUserHistory(
+  idToken: string,
+  limit = 25,
+): Promise<UserHistoryItem[]> {
+  const res = await fetch(`${API_BASE}/api/v1/users/me/history?limit=${limit}`, {
+    headers: authHeaders(idToken),
+  });
+  const body = await parse<{ items: UserHistoryItem[] }>(res);
+  return body.items;
 }
 
 export async function getSuggestedQuestions(documentId: string): Promise<string[]> {

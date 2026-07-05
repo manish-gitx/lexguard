@@ -12,6 +12,7 @@ from app.api.routes_health import router as health_router
 from app.api.routes_reports import router as reports_router
 from app.api.routes_scans import router as scans_router
 from app.api.routes_statutes import router as statutes_router
+from app.api.routes_users import router as users_router
 from app.config import Settings, get_settings
 from app.core.errors import register_exception_handlers
 from app.core.logging import setup_logging
@@ -54,6 +55,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             {"name": "statutes", "description": "Curated Indian civil-law knowledge base."},
             {"name": "reports", "description": "Shareable scorecard storage with 24h TTL."},
             {"name": "chat", "description": "Grounded follow-up chat scoped to a prior scan."},
+            {"name": "users", "description": "Authenticated user history and profile data."},
         ],
         lifespan=_build_lifespan(settings),
     )
@@ -83,6 +85,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(statutes_router)
     app.include_router(reports_router)
     app.include_router(scans_router)
+    app.include_router(users_router)
 
     return app
 

@@ -1,8 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { LexGuardApiError, analyzeText } from "@/lib/api";
+import { useAuth } from "@/components/auth-provider";
+import { LexGuardApiError, analyzePdf, analyzeText } from "@/lib/api";
 import type { DocumentScorecard, Domain, Language } from "@/lib/types";
+
+type InputMode = "text" | "pdf";
 
 const DOMAINS: { value: Domain; label: string }[] = [
   { value: "employment", label: "Employment" },
@@ -29,22 +32,55 @@ export function CompareAnalyzer({
 }) {
   const [textA, setTextA] = useState("");
   const [textB, setTextB] = useState("");
+  const [fileA, setFileA] = useState<File | null>(null);
+  const [fileB, setFileB] = useState<File | null>(null);
+  const [modeA, setModeA] = useState<InputMode>("text");
+  const [modeB, setModeB] = useState<InputMode>("text");
   const [labelA, setLabelA] = useState("Document A");
   const [labelB, setLabelB] = useState("Document B");
   const [domain, setDomain] = useState<Domain>("employment");
   const [language, setLanguage] = useState<Language>("en");
   const [loading, setLoading] = useState(false);
+  const { user, loading: authLoading, configured, signIn, getIdToken } = useAuth();
+
+  async function analyzeSide(
+    mode: InputMode,
+    text: string,
+    file: File | null,
+    idToken: string | null,
+  ) {
+    if (mode === "text") {
+      if (text.trim().length < 20) {
+        throw new LexGuardApiError(
+          "too_short",
+          422,
+          "Pasted documents need at least 20 characters.",
+        );
+      }
+      return analyzeText({ text, domain_hint: domain, language, idToken });
+    }
+
+    if (!file) {
+      throw new LexGuardApiError("no_file", 422, "Choose a PDF for both uploaded documents.");
+    }
+    return analyzePdf(file, domain, language, idToken);
+  }
 
   async function submit() {
-    if (textA.trim().length < 20 || textB.trim().length < 20) {
-      onError({ message: "Both documents need at least 20 characters." });
+    if (!configured) {
+      onError({ message: "Google sign-in is not configured for this environment." });
+      return;
+    }
+    if (!user) {
+      await signIn();
       return;
     }
     setLoading(true);
     try {
+      const idToken = await getIdToken();
       const [a, b] = await Promise.all([
-        analyzeText({ text: textA, domain_hint: domain, language }),
-        analyzeText({ text: textB, domain_hint: domain, language }),
+        analyzeSide(modeA, textA, fileA, idToken),
+        analyzeSide(modeB, textB, fileB, idToken),
       ]);
       onResult({ a, b, labelA, labelB });
     } catch (e) {
@@ -62,15 +98,23 @@ export function CompareAnalyzer({
           letter="A"
           label={labelA}
           onLabelChange={setLabelA}
+          mode={modeA}
+          onModeChange={setModeA}
           text={textA}
           onTextChange={setTextA}
+          file={fileA}
+          onFileChange={setFileA}
         />
         <DocColumn
           letter="B"
           label={labelB}
           onLabelChange={setLabelB}
+          mode={modeB}
+          onModeChange={setModeB}
           text={textB}
           onTextChange={setTextB}
+          file={fileB}
+          onFileChange={setFileB}
         />
       </div>
 
@@ -108,11 +152,17 @@ export function CompareAnalyzer({
         <button
           type="button"
           onClick={submit}
-          disabled={loading}
+          disabled={loading || authLoading}
           className="ml-auto group inline-flex items-center gap-3 px-5 py-3 bg-accent text-bg disabled:bg-ink-faint disabled:text-ink-low transition-colors"
         >
           <span className="label text-bg">
-            {loading ? "Scanning both documents…" : "Compare"}
+            {loading
+              ? "Scanning both documents..."
+              : authLoading
+                ? "Checking login"
+                : user
+                  ? "Compare"
+                  : "Sign in to compare"}
           </span>
           <span aria-hidden className="text-bg">
             {loading ? "…" : "↵"}
@@ -133,14 +183,22 @@ function DocColumn({
   letter,
   label,
   onLabelChange,
+  mode,
+  onModeChange,
   text,
   onTextChange,
+  file,
+  onFileChange,
 }: {
   letter: "A" | "B";
   label: string;
   onLabelChange: (v: string) => void;
+  mode: InputMode;
+  onModeChange: (v: InputMode) => void;
   text: string;
   onTextChange: (v: string) => void;
+  file: File | null;
+  onFileChange: (v: File | null) => void;
 }) {
   return (
     <div className="space-y-3">
@@ -154,13 +212,40 @@ function DocColumn({
           placeholder={`Document ${letter}`}
         />
       </div>
-      <textarea
-        value={text}
-        onChange={(e) => onTextChange(e.target.value)}
-        placeholder="Paste contract / offer letter / policy…"
-        rows={12}
-        className="w-full bg-surface border border-rule rounded-sm px-5 py-4 text-ink placeholder:text-ink-faint resize-y focus:border-rule-strong focus:outline-none transition-colors"
-      />
+
+      <div className="flex gap-1">
+        <ToggleButton active={mode === "text"} onClick={() => onModeChange("text")}>
+          Paste text
+        </ToggleButton>
+        <ToggleButton active={mode === "pdf"} onClick={() => onModeChange("pdf")}>
+          Upload PDF
+        </ToggleButton>
+      </div>
+
+      {mode === "text" ? (
+        <textarea
+          value={text}
+          onChange={(e) => onTextChange(e.target.value)}
+          placeholder="Paste contract / offer letter / policy..."
+          rows={12}
+          className="w-full bg-surface border border-rule rounded-sm px-5 py-4 text-ink placeholder:text-ink-faint resize-y focus:border-rule-strong focus:outline-none transition-colors"
+        />
+      ) : (
+        <label className="w-full min-h-[18rem] bg-surface border border-dashed border-rule-strong rounded-sm px-5 py-10 flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-accent transition-colors">
+          <span className="label text-center">
+            {file ? file.name : `Upload document ${letter}`}
+          </span>
+          <span className="text-ink-low text-xs text-center">
+            Digital PDF only. Scanned PDFs need extractable text.
+          </span>
+          <input
+            type="file"
+            accept="application/pdf"
+            onChange={(e) => onFileChange(e.target.files?.[0] ?? null)}
+            className="sr-only"
+          />
+        </label>
+      )}
     </div>
   );
 }

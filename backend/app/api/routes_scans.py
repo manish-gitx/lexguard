@@ -2,13 +2,16 @@ from __future__ import annotations
 
 import logging
 import re
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
 
 from app.agents.chat import ChatAgent
+from app.auth import AuthUser, get_optional_user
 from app.persistence.artifacts import get_artifact_store
 from app.persistence.audio import get_audio_store
+from app.persistence.user_documents import get_user_document_store
 from app.schemas import FollowupRequest, FollowupResponse, SuggestionsResponse
 
 router = APIRouter(prefix="/api/v1/scans", tags=["chat"])
@@ -78,7 +81,11 @@ async def get_audio(
     response_model=FollowupResponse,
     summary="Ask a follow-up question grounded in the prior scan",
 )
-async def followup(document_id: str, req: FollowupRequest) -> FollowupResponse:
+async def followup(
+    document_id: str,
+    req: FollowupRequest,
+    user: Annotated[AuthUser | None, Depends(get_optional_user)],
+) -> FollowupResponse:
     artifacts = await get_artifact_store().get(document_id)
     if not artifacts:
         raise HTTPException(status_code=404, detail=_NOT_FOUND)
@@ -96,6 +103,13 @@ async def followup(document_id: str, req: FollowupRequest) -> FollowupResponse:
         "followup_answered",
         extra={"document_id": document_id, "cited": cited, "answer_len": len(answer)},
     )
+    if user:
+        await get_user_document_store().save_chat_turns(
+            user=user,
+            document_id=document_id,
+            question=req.question,
+            answer=answer.strip(),
+        )
     return FollowupResponse(
         answer=answer.strip(),
         document_id=document_id,

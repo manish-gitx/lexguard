@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { AgentsShowcase } from "@/components/agents-showcase";
+import { AuthControl } from "@/components/auth-control";
 import { AuroraBg } from "@/components/aurora-bg";
 import { ScrollReveal } from "@/components/scroll-reveal";
 import { StatusPulse } from "@/components/status-pulse";
@@ -43,7 +44,7 @@ export default function Page() {
   );
 }
 
-function Header({ active }: { active: "home" | "scan" | "compare" }) {
+function Header({ active }: { active: "home" | "scan" | "compare" | "history" }) {
   return (
     <header className="relative z-10 px-6 md:px-12 lg:px-16 max-w-6xl mx-auto pt-8 flex items-center justify-between flex-wrap gap-y-3">
       <Link href="/" className="flex items-baseline gap-3">
@@ -54,8 +55,12 @@ function Header({ active }: { active: "home" | "scan" | "compare" }) {
         <NavPill href="/" label="Home" active={active === "home"} />
         <NavPill href="/scan" label="Scan" active={active === "scan"} />
         <NavPill href="/compare" label="Compare" active={active === "compare"} />
+        <NavPill href="/history" label="History" active={active === "history"} />
       </nav>
-      <StatusPulse label="Cloud Run / asia-south1" />
+      <div className="flex items-center gap-4">
+        <StatusPulse label="Cloud Run / asia-south1" />
+        <AuthControl />
+      </div>
     </header>
   );
 }
@@ -109,7 +114,7 @@ function Hero() {
           Five AI agents read the contract, ground every flag in Indian civil
           law, argue from both sides, and hand back a structured scorecard.
           Built for the 40-page privacy policy nobody reads and the offer letter
-          you're about to sign at 11&nbsp;pm.
+          you&apos;re about to sign at 11&nbsp;pm.
         </p>
 
         <div className="mt-12 flex flex-col md:flex-row md:items-center gap-8">

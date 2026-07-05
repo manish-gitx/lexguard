@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { AuthControl } from "@/components/auth-control";
 import { Analyzer } from "@/components/analyzer";
 import { AskFab } from "@/components/ask-fab";
 import { ChatPanel } from "@/components/chat-panel";
@@ -81,6 +82,7 @@ export default function ScanPage() {
 
             <ScrollReveal>
               <ChatPanel
+                key={scorecard.document_id}
                 documentId={scorecard.document_id}
                 suggestedQuestions={scorecard.suggested_questions}
                 language="en"
@@ -143,8 +145,12 @@ function Header() {
         <NavPill href="/" label="Home" active={false} />
         <NavPill href="/scan" label="Scan" active />
         <NavPill href="/compare" label="Compare" active={false} />
+        <NavPill href="/history" label="History" active={false} />
       </nav>
-      <StatusPulse label="Cloud Run / asia-south1" />
+      <div className="flex items-center gap-4">
+        <StatusPulse label="Cloud Run / asia-south1" />
+        <AuthControl />
+      </div>
     </header>
   );
 }

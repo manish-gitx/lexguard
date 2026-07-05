@@ -26,6 +26,8 @@ class Settings(BaseSettings):
 
     GCP_PROJECT_ID: str = ""
     GCP_REGION: str = "asia-south1"
+    FIREBASE_PROJECT_ID: str = ""
+    USER_DOCS_BUCKET: str = ""
 
     MONGODB_URI: str = ""
     MONGODB_DB: str = "lexguard"
@@ -50,6 +52,16 @@ class Settings(BaseSettings):
     @property
     def is_prod(self) -> bool:
         return self.APP_ENV == "prod"
+
+    @property
+    def firebase_project_id(self) -> str:
+        return self.FIREBASE_PROJECT_ID or self.GCP_PROJECT_ID
+
+    @property
+    def user_docs_bucket(self) -> str:
+        if self.USER_DOCS_BUCKET:
+            return self.USER_DOCS_BUCKET
+        return f"lexguard-user-docs-{self.GCP_PROJECT_ID}" if self.GCP_PROJECT_ID else ""
 
     @field_validator("GEMINI_API_KEY")
     @classmethod

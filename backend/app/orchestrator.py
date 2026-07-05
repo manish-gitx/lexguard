@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from app.agents import (
+    DomainClassifierAgent,
     ExtractorAgent,
     JudgeAgent,
     RedTeamAgent,
@@ -58,6 +59,7 @@ async def analyze_document(
     settings = get_settings()
     repo = get_repo()
 
+    domain_classifier = DomainClassifierAgent(llm)
     extractor = ExtractorAgent(llm)
     risk = RiskAgent(llm)
     rights = RightsAgent(llm)
@@ -65,6 +67,17 @@ async def analyze_document(
     judge = JudgeAgent(llm)
 
     log.info("orchestrator_start", extra={"domain": domain.value, "text_length": len(text)})
+
+    domain_verdict = await domain_classifier.run(text=text, selected_domain=domain)
+    log.info(
+        "domain_classified",
+        extra={
+            "selected_domain": domain_verdict.selected_domain.value,
+            "inferred_domain": domain_verdict.inferred_domain.value,
+            "matches_selection": domain_verdict.matches_selection,
+            "confidence": domain_verdict.confidence,
+        },
+    )
 
     extracted = await extractor.run(text=text, domain=domain)
     clauses = extracted.clauses
@@ -148,6 +161,7 @@ async def analyze_document(
         "retrieved_statutes": retrieved_context,
         "suggested_questions": suggested_questions,
         "risk_score": risk_score,
+        "domain_verdict": domain_verdict.model_dump(mode="json"),
     }
     artifact_task = asyncio.create_task(
         get_artifact_store().put(document_id, artifacts_payload)
@@ -172,6 +186,7 @@ async def analyze_document(
     return DocumentScorecard(
         document_id=document_id,
         domain=domain,
+        domain_verdict=domain_verdict,
         overall_severity=Severity(judge_result["overall_severity"]),
         risk_score=risk_score,
         counts=counts,

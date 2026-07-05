@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { AuthControl } from "@/components/auth-control";
 import { CompareAnalyzer, type ComparePair } from "@/components/compare-analyzer";
 import { CompareResult } from "@/components/compare-result";
 import { ScrollReveal } from "@/components/scroll-reveal";
@@ -28,13 +29,13 @@ export default function ComparePage() {
           </h1>
 
           <p className="mt-8 max-w-2xl text-ink-mid text-lg leading-relaxed">
-            Paste two contracts, policies, or offer letters. Each one runs the
-            full five-agent pipeline in parallel, then we hand back a side-by-side
+            Paste or upload two contracts, policies, or offer letters. Each one runs
+            the full five-agent pipeline in parallel, then we hand back a side-by-side
             scorecard with the exact delta — severity by severity, clause by clause.
           </p>
 
           <div className="mt-12 grid grid-cols-3 gap-px bg-rule max-w-2xl">
-            <Step n="01" label="paste both" />
+            <Step n="01" label="load both" />
             <Step n="02" label="parallel scan" />
             <Step n="03" label="delta verdict" />
           </div>
@@ -104,8 +105,12 @@ function Header() {
         <NavPill href="/" label="Home" active={false} />
         <NavPill href="/scan" label="Scan" active={false} />
         <NavPill href="/compare" label="Compare" active />
+        <NavPill href="/history" label="History" active={false} />
       </nav>
-      <StatusPulse label="Cloud Run / asia-south1" />
+      <div className="flex items-center gap-4">
+        <StatusPulse label="Cloud Run / asia-south1" />
+        <AuthControl />
+      </div>
     </header>
   );
 }
