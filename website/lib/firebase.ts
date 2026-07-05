@@ -34,3 +34,4 @@ export function getFirebaseAuth(): Auth | null {
 }
 
 export const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: "select_account" });
